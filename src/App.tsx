@@ -34,8 +34,8 @@ export default function Home() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            username: '*',
-            password: '*'
+            username: 'oowasn',
+            password: 'password'
           }),
         });
 
@@ -83,17 +83,17 @@ export default function Home() {
 
   return (
     <div
-      style={{height: "100vh", width: "100vw", margin: 0, padding: 0, overflow: "hidden" }}
-      className='flex'
+      style={{width: "100vw", margin: 0, padding: 0, }}
+      className='min-h-[100vh] flex flex-col-reverse xl:flex-row'
     >
       {/* <button onClick={openImgEditor}>Open Filerobot image editor</button> */}
-      <div className='border h-screen overflow-y-scroll bg-transparent grid grid-cols-3 gap-1 w-[30%] p-2' >
+      <div className='border h-72 xl:h-screen overflow-y-scroll bg-transparent grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 xl:grid-cols-3 gap-4  w-full xl:w-[35%] p-2 xl:p-4' >
         {gallery.map((img, index) => (
           <img
             key={index}
             src={img.previewUrl}
             alt={`Preview ${index + 1}`}
-            className='w-24 h-24 cursor-pointer border border-slate-300 rounded'
+            className='w-24 h-24 xl:w-28 xl:h-28 cursor-pointer border border-slate-300 rounded'
             onClick={() => {fetchImages(); setCurrentImage(img.originalUrl)} }
           />
         ))}
