@@ -3,6 +3,7 @@ import FilerobotImageEditor, {
   TABS,
   TOOLS,
 } from 'react-filerobot-image-editor';
+import { useLocation } from 'react-router-dom';
 
 type RawPhoto = {
   id: number;
@@ -24,6 +25,8 @@ export default function Home() {
   // const [isImgEditorShown, setIsImgEditorShown] = useState(false);
   const [currentImage, setCurrentImage] = useState('https://scaleflex.airstore.io/demo/stephen-walker-unsplash.jpg');
   const [gallery, setGallery] = useState<Photo[]>([]);
+  const location = useLocation();
+  const [mesParams, setMesParams] = useState({});
 
   const fetchImages = async () => {
       try {
@@ -80,6 +83,16 @@ export default function Home() {
     }])
 
   }, []);
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const mesDonnees = {
+      id: queryParams.get('id'),
+      nom: queryParams.get('nom'),
+    };
+    console.log(location.search)
+    setMesParams(mesDonnees);
+  }, [location.search]);
 
   return (
     <div
