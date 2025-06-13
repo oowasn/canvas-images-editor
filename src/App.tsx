@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import FilerobotImageEditor, {
   TABS,
   TOOLS,
 } from 'react-filerobot-image-editor';
-import { useLocation } from 'react-router-dom';
 
 type RawPhoto = {
   id: number;
@@ -23,15 +23,17 @@ type Photo = {
 
 export default function Home() {
   // const [isImgEditorShown, setIsImgEditorShown] = useState(false);
-  const [currentImage, setCurrentImage] = useState('https://scaleflex.airstore.io/demo/stephen-walker-unsplash.jpg');
-  const [gallery, setGallery] = useState<Photo[]>([]);
   const location = useLocation();
+  const v = new URLSearchParams(location.search).get('path')
+  const [currentImage, setCurrentImage] = useState(
+    v ? v : 'https://scaleflex.airstore.io/demo/stephen-walker-unsplash.jpg'
+  );
+  const [gallery, setGallery] = useState<Photo[]>([]);
   const [mesParams, setMesParams] = useState({});
+  const [token, setToken] = useState('');
 
-  const fetchImages = async () => {
-      try {
-
-        const loginRes = await fetch('https://photo.bonmais.com/auth/login', {
+  const getToken = async () => {
+    const loginRes = await fetch('https://photo.bonmais.com/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -41,11 +43,15 @@ export default function Home() {
             password: 'password'
           }),
         });
-
         if (!loginRes.ok) throw new Error('Échec de connexion');
-
         const loginData = await loginRes.json();
-        const token = loginData.access_token
+        setToken(loginData.access_token)
+  }
+
+  const fetchImages = async () => {
+      try {
+
+        getToken();
 
         const photoRes = await fetch('https://photo.bonmais.com/photos/all', {
           headers: {
@@ -86,12 +92,11 @@ export default function Home() {
 
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
-    const mesDonnees = {
-      id: queryParams.get('id'),
-      nom: queryParams.get('nom'),
-    };
-    console.log(location.search)
-    setMesParams(mesDonnees);
+    const path = queryParams.get('path')
+
+    console.log(path)
+    setCurrentImage('https://photo.bonmais.com/' + path)
+    // setMesParams(mesDonnees);
   }, [location.search]);
 
   return (
@@ -100,23 +105,61 @@ export default function Home() {
       className='min-h-[100vh] flex flex-col-reverse xl:flex-row'
     >
       {/* <button onClick={openImgEditor}>Open Filerobot image editor</button> */}
-      <div className='border h-72 xl:h-screen overflow-y-scroll bg-transparent grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 xl:grid-cols-3 gap-4  w-full xl:w-[35%] p-2 xl:p-4' >
-        {gallery.map((img, index) => (
-          <img
-            key={index}
-            src={img.previewUrl}
-            alt={`Preview ${index + 1}`}
-            className='w-24 h-24 xl:w-28 xl:h-28 cursor-pointer border border-slate-300 rounded'
-            onClick={() => {fetchImages(); setCurrentImage(img.originalUrl)} }
-          />
-        ))}
+      <div className='flex flex-col h-72 bg-transparent xl:h-screen overflow-y-scroll w-full xl:w-[35%] p-2 xl:p-4'>
+        <button onClick={ () => fetchImages() } className='w-28 h-10 bg-indigo-600 text-white rounded my-2 mb-4'>
+          Rafraichir
+        </button>
+        <div className='border     grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 xl:grid-cols-3 gap-4 ' >
+          {gallery.map((img, index) => (
+            <img
+              key={index}
+              src={img.previewUrl}
+              alt={`Preview ${index + 1}`}
+              className='w-24 h-24 xl:w-28 xl:h-28 cursor-pointer border border-slate-300 rounded'
+              onClick={() => {fetchImages(); setCurrentImage(img.originalUrl)} }
+            />
+          ))}
+        </div>
       </div>
 
         <FilerobotImageEditor
           source={currentImage}
-          onSave={(editedImageObject, designState) =>
-            console.log('saved', editedImageObject, designState)
-          }
+          onSave={async (editedImageObject, designState) => {
+            const base64Data = editedImageObject.imageBase64;
+
+             if (!base64Data) {
+              console.error('Aucune image à uploader (base64 vide)');
+              return;
+            }
+            // Convertir base64 → Blob
+            const response = await fetch(base64Data);
+            const blob = await response.blob();
+            // Créer un objet File (optionnel mais plus propre pour certains backends)
+            const file = new File([blob], 'image-modifiee.png', { type: blob.type });
+            // Préparer le FormData
+            const formData = new FormData();
+            formData.append('files', file);
+
+            try {
+              getToken();
+              const uploadResponse = await fetch('https://photo.bonmais.com/photos/upload', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                }
+              });
+
+              if (!uploadResponse.ok) {
+                throw new Error("Erreur lors de l'envoi");
+              }
+
+              const result = await uploadResponse.json();
+              console.log('Upload réussi:', result);
+            } catch (err) {
+              console.error('Erreur upload:', err);
+            }
+          }}
           annotationsCommon={{
             fill: '#ff0000',
           }}
